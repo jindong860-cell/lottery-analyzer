@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>彩票分析助手（个人版）</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>彩票分析助手</h1>
+  <span id="health" class="muted">连接中…</span>
+</header>
+
+<nav>
+  <button data-tab="draws" class="active">开奖数据</button>
+  <button data-tab="stats">统计分析</button>
+  <button data-tab="model">模型与回测</button>
+  <button data-tab="scratch">刮刮乐验证</button>
+  <button data-tab="about">说明</button>
+</nav>
+
+<main>
+  <!-- 开奖数据 -->
+  <section id="tab-draws" class="tab active">
+    <div class="card row">
+      <label>彩种 <select id="game-select">
+        <option value="dlt">大乐透</option>
+        <option value="ssq">双色球</option>
+      </select></label>
+      <button id="btn-sync-inc">增量同步（官方）</button>
+      <button id="btn-sync-full">首次全量（官方，最多1000期）</button>
+      <span id="sync-status" class="muted"></span>
+    </div>
+    <div class="card">
+      <h3>开奖列表 <span id="draw-count" class="muted"></span></h3>
+      <div id="draw-pager" class="row">
+        <button id="page-prev">上一页</button>
+        <span id="page-info" class="muted"></span>
+        <button id="page-next">下一页</button>
+      </div>
+      <table id="draw-table"><thead>
+        <tr><th>期号</th><th>开奖日期</th><th id="th-front">前区</th><th id="th-back">后区</th></tr>
+      </thead><tbody></tbody></table>
+    </div>
+    <div class="card">
+      <h3>同步日志</h3>
+      <table id="synclog-table"><thead>
+        <tr><th>时间</th><th>彩种</th><th>结果</th><th>拉取/新增/更新</th><th>消息</th></tr>
+      </thead><tbody></tbody></table>
+    </div>
+  </section>
+
+  <!-- 统计分析 -->
+  <section id="tab-stats" class="tab">
+    <div class="card row">
+      <label>统计窗口（0=全部）<input id="stat-window" type="number" min="0" value="100" style="width:80px"></label>
+      <button id="btn-stats">计算</button>
+      <span class="muted">计算方法：频率=出现期数/统计期数；遗漏见各列表头说明</span>
+    </div>
+    <div class="card">
+      <h3>频率分布（前区）</h3>
+      <canvas id="freq-canvas" width="860" height="240"></canvas>
+      <table id="freq-table"><thead>
+        <tr><th>号码</th><th>出现期数</th><th>频率</th></tr>
+      </thead><tbody></tbody></table>
+    </div>
+    <div class="card">
+      <h3>遗漏（前区）<span class="muted">当前=距最近一次开出的期数；最大=历史最长间隔；平均=历史间隔均值</span></h3>
+      <table id="omit-table"><thead>
+        <tr><th>号码</th><th>当前遗漏</th><th>最大遗漏</th><th>平均遗漏</th></tr>
+      </thead><tbody></tbody></table>
+    </div>
+    <div class="card">
+      <h3>近期走势（最新在前）</h3>
+      <div id="trend-grid"></div>
+    </div>
+  </section>
+
+  <!-- 模型与回测 -->
+  <section id="tab-model" class="tab">
+    <div class="card row">
+      <label>测试集比例 <input id="m-test-ratio" type="number" step="0.05" min="0.05" max="0.5" value="0.2" style="width:70px"></label>
+      <label>特征窗口（期） <input id="m-window" type="number" min="5" max="200" value="30" style="width:70px"></label>
+      <button id="btn-train">训练并回测</button>
+      <span id="train-status" class="muted"></span>
+    </div>
+    <div class="card">
+      <h3>历史运行</h3>
+      <table id="runs-table"><thead>
+        <tr><th>运行</th><th>彩种</th><th>窗口</th><th>测试比例</th><th>样本(训练/测试)</th><th>AUC</th><th>LogLoss</th><th>Brier</th><th>时间</th><th></th></tr>
+      </thead><tbody></tbody></table>
+    </div>
+    <div class="card">
+      <h3>最新回测报告 <span id="run-id" class="muted"></span></h3>
+      <pre id="run-report" class="report">尚未训练。</pre>
+    </div>
+    <div class="card">
+      <h3>下期参考（Top-K）</h3>
+      <div class="row"><button id="btn-predict">基于最新运行预测下期</button><span class="muted" id="predict-basis"></span></div>
+      <div id="predict-out" class="balls"></div>
+      <p class="disclaimer" id="predict-disclaimer"></p>
+    </div>
+  </section>
+
+  <!-- 刮刮乐 -->
+  <section id="tab-scratch" class="tab">
+    <div class="card">
+      <h3>上传未刮票据照片</h3>
+      <div class="row">
+        <input type="file" id="scratch-file" accept="image/*">
+        <label>票种提示 <select id="scratch-hint"><option value="">自动识别</option></select></label>
+        <button id="btn-upload">上传并识别</button>
+        <span id="upload-status" class="muted"></span>
+      </div>
+      <div id="upload-preview" class="row"></div>
+      <p class="muted">流程：票种识别 → ROI 裁剪 → OCR → 模板匹配 → 与你录入的实际结果比对。置信度不足将提示人工复核。</p>
+    </div>
+    <div class="card">
+      <h3>识别准确率（验证闭环）</h3>
+      <div id="accuracy-out" class="muted">暂无数据</div>
+    </div>
+    <div class="card">
+      <h3>样本列表</h3>
+      <table id="samples-table"><thead>
+        <tr><th>ID</th><th>时间</th><th>票种</th><th>预测奖级</th><th>金额</th><th>置信度</th><th>状态</th><th>复核原因</th><th>操作</th></tr>
+      </thead><tbody></tbody></table>
+    </div>
+    <div class="card">
+      <h3>票种模板（profiles.json）</h3>
+      <p class="muted">默认模板为示例校准值；请用真实票据照片核对宽高比/主色/奖区位置后保存。</p>
+      <textarea id="profiles-json" rows="14" style="width:100%"></textarea>
+      <div class="row"><button id="btn-profiles-save">保存票种模板</button><span id="profiles-status" class="muted"></span></div>
+    </div>
+  </section>
+
+  <!-- 说明 -->
+  <section id="tab-about" class="tab">
+    <div class="card">
+      <h3>数据来源与免责声明</h3>
+      <ul>
+        <li>双色球：中国福利彩票发行管理中心官网（www.cwl.gov.cn）开奖公告接口。</li>
+        <li>大乐透：中国体育彩票官方 webapi（webapi.sporttery.cn，gameNo=85）。</li>
+        <li>本应用不伪造数据：官方接口不可用时同步失败并记录日志，不填充任何合成数据。</li>
+      </ul>
+      <p class="disclaimer">彩票开奖为独立随机事件。历史统计、模型指标与预测结果仅供方法学习与数据参考，不构成投注建议；请理性购彩。</p>
+    </div>
+  </section>
+</main>
+
+<footer class="muted">个人使用 · 数据来自官方公开渠道 · 预测仅供参考，不构成投注建议</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
