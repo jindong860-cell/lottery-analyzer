@@ -56,7 +56,7 @@ object ModelMath {
 
     /** 取概率最高的前 k 个号码（平手时号码小者优先，与服务端排序一致）。 */
     fun topK(probs: Map<Int, Double>, k: Int): List<Pair<Int, Double>> =
-        probs.entries.sortedWith(compareByDescending<Map<Int, Double>> { it.value }.thenBy { it.key })
+        probs.entries.sortedWith(compareByDescending<Map.Entry<Int, Double>> { it.value }.thenBy { it.key })
             .take(k).map { it.key to it.value }
 
     private fun sigmoid(z: Double): Double = when {

@@ -30,7 +30,7 @@ object ScratchPipeline {
             val task: Task<Text> = recognizer.process(InputImage.fromBitmap(bitmap, 0))
             task.addOnSuccessListener { if (cont.isActive) cont.resume(it) }
             task.addOnFailureListener { if (cont.isActive) cont.resumeWithException(it) }
-            cont.invokeOnCancellation { task.cancel() }
+            // 注：GMS Task 不支持取消；cont.isActive 守卫保证协程取消后结果被丢弃。
         }
 
     /**
